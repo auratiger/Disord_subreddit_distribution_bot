@@ -1,9 +1,11 @@
 {
-    "limit": 5,
+    "limit": 10,
     "reddit_scrape_running": true,
     "last_saved": "",
     "last_upvoted": "",
+    "last_scrape_timestamp": -1,
     "guild_id": 760058012898951218,
     "channels": {
+
     }
 }

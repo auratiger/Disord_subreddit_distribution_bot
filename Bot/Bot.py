@@ -57,9 +57,9 @@ async def on_message(message):
             await message.delete()
         return
     elif(msg.startswith("$disable_reddit")):
-        pass
+        data["reddit_scrape_running"] = False
     elif(msg.startswith("$anable_reddit")):
-        pass
+        data["reddit_scrape_running"] = True
 
 # === reddit api === #
 
@@ -73,22 +73,24 @@ async def manage_saved_posts(limit: int):
     data["last_saved"] = last_saved_post
 
     for key in saved:
-        for post in saved[key]:
-            channel = None
-            subreddit_name = post.subreddit.display_name
-            channel_id = os.getenv(subreddit_name)
+        channel = None
+        channel_id = data["channels"].get(key, None)
 
-            if (channel_id == None):
-                guild = client.get_guild(data["guild_id"])
-                category_channel = discord.utils.get(guild.categories, name="Text Channels")
+        if (channel_id == None):
+            guild = client.get_guild(data["guild_id"])
+            category_channel = discord.utils.get(guild.categories, name="Text Channels")
 
-                channel = await category_channel.create_text_channel(subreddit_name)
+            channel = await category_channel.create_text_channel(key)
 
-                os.environ[subreddit_name] = str(channel.id)
-            else:
-                channel = client.get_channel(channel_id)
+            data["channels"][key] = channel.id
+        else:
+            channel = client.get_channel(channel_id)
 
-            await channel.send("hello")
+        post_list = saved[key]
+
+        for i in range(len(post_list) - 1, -1, -1):
+            post = post_list[i]
+            await channel.send(post.url)
 
 async def manage_upvoted_posts(limit: int):
     last_upvoted = data["last_upvoted"]
@@ -126,13 +128,17 @@ async def time_check():
 
     while not client.is_closed() and data["reddit_scrape_running"]:
 
-        # manage_saved_posts(limit)
+        # TODO need to add error handling !!
+
+        await manage_saved_posts(limit)
 
         await manage_upvoted_posts(limit)
 
+        # the timestamp of when the proccess has finished
+        data[last_scrape_timestamp] = time.time()
         write_json(data)
 
-        await asyncio.sleep((60 * 5) + 5)
+        await asyncio.sleep((60 * 6) + 5)
 
 # === === === #
 
