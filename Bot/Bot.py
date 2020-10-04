@@ -3,6 +3,7 @@ import asyncio
 from datetime import datetime, timedelta
 import time
 import sched
+import json
 
 import discord
 from dotenv import load_dotenv
@@ -10,39 +11,36 @@ from dotenv import load_dotenv
 from RedditService import RedditService
 
 # load env variables
-load_dotenv()
+load_dotenv(override=True)
 
-# Discord Creds
+# load data
+data = None
+with open("data.json") as data_file:
+    data = json.load(data_file)
+
+# === Discord API ===
 TOKEN = os.getenv("DISCORD_TOKEN")
-GUILD_ID = int(os.getenv("guild"))
-
 client = discord.Client()
 
-# Reddit Creds
-username = os.getenv("name")
-password = os.getenv("password")
-client_id = os.getenv("client_id")
-client_secret = os.getenv("client_secret")
-user_agent = os.getenv("user_agent")
-
+# === Reddit API ===
 reddit_service = RedditService(
-    client_id=client_id,
-    client_secret=client_secret,
-    user_agent=user_agent,
-    username=username,
-    password=password
+    client_id=os.getenv("client_id"),
+    client_secret=os.getenv("client_secret"),
+    user_agent=os.getenv("user_agent"),
+    username=os.getenv("name"),
+    password=os.getenv("password")
 )
 
-reddit_running = True
-
-# reddit_service.fetch_upvoted_links()
-# reddit_service.fetch_saved_links()
+def write_json(data, filename="data.json"):
+    with open(filename, "w") as write_file:
+        json.dump(data, write_file, indent=4)
 
 # === events === #
 
 @client.event
 async def on_ready():
     print("Connected to Discord")
+    print(data)
 
 @client.event
 async def on_message(message):
@@ -65,45 +63,82 @@ async def on_message(message):
 
 # === reddit api === #
 
-# Discord channel names are all lower case and the words are
-# seperated by dashes (-) instead of spaces
+async def manage_saved_posts(limit: int):
+    last_saved = data["last_saved"]
+
+    # fetch a dictionary of containing the saved posts, and the name of the last fetched post
+    (saved, last_saved_post) = reddit_service.fetch_saved_posts(limit=limit, break_point=last_saved)
+
+    # update the env variable "last_saved" with the latest saved_post
+    data["last_saved"] = last_saved_post
+
+    for key in saved:
+        for post in saved[key]:
+            channel = None
+            subreddit_name = post.subreddit.display_name
+            channel_id = os.getenv(subreddit_name)
+
+            if (channel_id == None):
+                guild = client.get_guild(data["guild_id"])
+                category_channel = discord.utils.get(guild.categories, name="Text Channels")
+
+                channel = await category_channel.create_text_channel(subreddit_name)
+
+                os.environ[subreddit_name] = str(channel.id)
+            else:
+                channel = client.get_channel(channel_id)
+
+            await channel.send("hello")
+
+async def manage_upvoted_posts(limit: int):
+    last_upvoted = data["last_upvoted"]
+
+    # fetch a list of containing the upvoted posts, and the name of the last fetched post
+    (upvoted, last_upvoted_post) = reddit_service.fetch_upvoted_posts(limit=limit, break_point=last_upvoted)
+
+    # update the env variable "last_upvoted" with the latest saved_post
+    data["last_upvoted"] = last_upvoted_post
+
+    channel = None
+    channel_id = data["channels"].get("upvotes", None)
+
+    if (channel_id == None):
+        guild = client.get_guild(data["guild_id"])
+        category_channel = discord.utils.get(guild.categories, name="Text Channels")
+
+        channel = await category_channel.create_text_channel("upvotes")
+
+        data["channels"]["upvotes"] = channel.id
+    else:
+        channel = client.get_channel(channel_id)
+
+    print(channel)
+    for i in range(len(upvoted) - 1, -1, -1):
+        post = upvoted[i]
+        print(post.url)
+        await channel.send(post.url)
+        await asyncio.sleep(0.2)
 
 async def time_check():
     await client.wait_until_ready()
 
-    guild = client.get_guild(GUILD_ID)
+    limit = data["limit"]
 
-    limit = int(os.getenv("limit"))
+    while not client.is_closed() and data["reddit_scrape_running"]:
 
-    while not client.is_closed() and reddit_running:
+        # manage_saved_posts(limit)
 
-        last_saved = os.getenv("last_saved")
+        await manage_upvoted_posts(limit)
 
-        (saved, last_saved_post) = reddit_service.fetch_saved_links(limit=limit, last_saved=last_saved)
-
-        # update the env variable "last_saved" with the latest saved_post
-        os.environ["last_saved"] = last_saved_post
-
-        for key in saved:
-            for post in saved[key]:
-                channel = os.getenv(post.subreddit)
-
-                if(channel == None):
-                    pass
-
-
-
-
-
+        write_json(data)
 
         await asyncio.sleep((60 * 5) + 5)
 
 # === === === #
 
-
 if __name__ == "__main__":
+    client.loop.create_task(time_check())
     client.run(TOKEN)
-    # client.loop.create_task(time_check())
 
 
 

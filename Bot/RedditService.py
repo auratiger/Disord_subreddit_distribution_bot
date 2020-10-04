@@ -15,43 +15,43 @@ class RedditService(praw.Reddit):
         self.user = self.user.me()
 
 
-    def fetch_upvoted_links(self, limit=10, break_point=""):
-        result = {}
+    def fetch_upvoted_posts(self, limit=10, break_point="") -> []:
+        result = []
         last_post = ""
         upvoted = self.user.upvoted(limit=limit);
 
+        counter = 0
         for post in upvoted:
             if(post.title == break_point):
                 break
+            elif(counter == 0):
+                last_post = post.title
+                counter += 1
 
-            subreddit = post.subreddit.display_name
-            if(subreddit in result):
-                result[subreddit].append(post)
-            else:
-                result[subreddit] = [post]
-
-            last_post = post.title
+            result.append(post)
 
         return (result, last_post)
 
 
 
-    def fetch_saved_links(self, limit, break_point):
+    def fetch_saved_posts(self, limit, break_point):
         result = {}
         last_post = ""
         upvoted = self.user.saved(limit=limit);
 
+        counter = 0
         for post in upvoted:
             if(post.title == break_point):
                 break
+            elif(counter == 0):
+                last_post = post.title
+                counter += 1
 
             subreddit = post.subreddit.display_name
             if(subreddit in result):
                 result[subreddit].append(post)
             else:
                 result[subreddit] = [post]
-
-            last_post = post.title
 
         return (result, last_post)
 
