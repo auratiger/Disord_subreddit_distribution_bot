@@ -31,9 +31,33 @@ reddit_service = RedditService(
     password=os.getenv("password")
 )
 
+# ==== util functions ====
+
 def write_json(data, filename="data.json"):
     with open(filename, "w") as write_file:
         json.dump(data, write_file, indent=4)
+
+async def delete_messages(channel):
+    counter = 0
+    async for message in channel.history(limit=200):
+        print(message.content)
+        await message.delete()
+
+async def disable_reddit(channel):
+    data["reddit_scrape_running"] = False
+    await channel.send("scraping was disabled")
+
+async def enable_reddit(channel):
+    data["reddit_scrape_running"] = True
+    await channel.send("scraping was anabled")
+
+async def on_message_switch_handler(argument, channel):
+    switcher = {
+        "$del_messages": await delete_messages(channel),
+        "$disable_reddit": await disable_reddit(channel),
+        "$anable_reddit": await enable_reddit(channel)
+    }
+    switcher.get(argument, None)
 
 # === events === #
 
@@ -48,18 +72,10 @@ async def on_message(message):
     author = message.author.name
     msg = message.content
 
-    if(author.startswith("Ani")):
+    if(author == "Ani"):
         return
-    elif(msg.startswith("$del_messages")):
-        counter = 0
-        async for message in channel.history(limit=200):
-            print(message.content)
-            await message.delete()
-        return
-    elif(msg.startswith("$disable_reddit")):
-        data["reddit_scrape_running"] = False
-    elif(msg.startswith("$anable_reddit")):
-        data["reddit_scrape_running"] = True
+    else:
+        on_message_switch_handler(msg, channel)
 
 # === reddit api === #
 
@@ -90,7 +106,7 @@ async def manage_saved_posts(limit: int):
 
         for i in range(len(post_list) - 1, -1, -1):
             post = post_list[i]
-            await channel.send(post.url)
+            await channel.send(post.shortlink)
 
 async def manage_upvoted_posts(limit: int):
     last_upvoted = data["last_upvoted"]
@@ -117,14 +133,22 @@ async def manage_upvoted_posts(limit: int):
     print(channel)
     for i in range(len(upvoted) - 1, -1, -1):
         post = upvoted[i]
-        print(post.url)
-        await channel.send(post.url)
+        # print(post.url)
+        print(post.shortlink)
+        # print(post.permalink)
+
+        await channel.send(post.shortlink)
         await asyncio.sleep(0.2)
+
+initial_run = True
 
 async def time_check():
     await client.wait_until_ready()
 
-    limit = data["limit"]
+    if initial_run:
+        limit = 500
+    else:
+        limit = data["limit"]
 
     while not client.is_closed() and data["reddit_scrape_running"]:
 
@@ -135,16 +159,21 @@ async def time_check():
         await manage_upvoted_posts(limit)
 
         # the timestamp of when the proccess has finished
-        data[last_scrape_timestamp] = time.time()
-        write_json(data)
+        data["last_scrape_timestamp"] = time.time()
 
         await asyncio.sleep((60 * 6) + 5)
 
 # === === === #
 
 if __name__ == "__main__":
-    client.loop.create_task(time_check())
-    client.run(TOKEN)
+    try:
+        client.loop.create_task(time_check())
+        client.run(TOKEN)
+    except Exception as e:
+        print("Something went wrong: {0}".format((e)))
+    finally:
+        write_json(data)
+
 
 
 

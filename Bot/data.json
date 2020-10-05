@@ -1,11 +1,22 @@
 {
     "limit": 10,
     "reddit_scrape_running": true,
-    "last_saved": "",
-    "last_upvoted": "",
-    "last_scrape_timestamp": -1,
+    "last_saved": "The React Cheatsheet for 2020 \ud83d\udcc4\u202c (+ real-world examples)",
+    "last_upvoted": "Honestly why it's so common...",
+    "last_scrape_timestamp": 1601845058.2293878,
     "guild_id": 760058012898951218,
     "channels": {
-
+        "reactjs": 762417765344215065,
+        "vscode": 762417770305421312,
+        "linuxmemes": 762417772025217055,
+        "ProgrammerAnimemes": 762417775188115456,
+        "badcode": 762417802140581919,
+        "ProgrammerHumor": 762417804364087297,
+        "programming": 762417806376566805,
+        "Frontend": 762417808164257812,
+        "linux": 762417810625658930,
+        "linux4noobs": 762417812404043807,
+        "learnprogramming": 762417814111649792,
+        "upvotes": 762417824312328205
     }
 }
