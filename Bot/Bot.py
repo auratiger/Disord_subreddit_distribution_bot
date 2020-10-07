@@ -191,7 +191,7 @@ if __name__ == "__main__":
             password=os.getenv("password")
         )
 
-        # client.loop.create_task(time_check())
+        client.loop.create_task(time_check())
         client.run(TOKEN)
     except RequestException as e:
         print("Could not connect to praw service: {0}".format(e))
