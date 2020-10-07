@@ -6,6 +6,7 @@ import sched
 import json
 
 import discord
+from prawcore.exceptions import  RequestException
 from dotenv import load_dotenv
 
 from RedditService import RedditService
@@ -13,23 +14,16 @@ from RedditService import RedditService
 # load env variables
 load_dotenv(override=True)
 
-# load data
-data = None
-with open("data.json") as data_file:
-    data = json.load(data_file)
-
 # === Discord API ===
 TOKEN = os.getenv("DISCORD_TOKEN")
 client = discord.Client()
 
-# === Reddit API ===
-reddit_service = RedditService(
-    client_id=os.getenv("client_id"),
-    client_secret=os.getenv("client_secret"),
-    user_agent=os.getenv("user_agent"),
-    username=os.getenv("name"),
-    password=os.getenv("password")
-)
+reddit_service = None
+
+# load data
+data = None
+with open("data.json") as data_file:
+    data = json.load(data_file)
 
 # ==== util functions ====
 
@@ -167,8 +161,19 @@ async def time_check():
 
 if __name__ == "__main__":
     try:
+        # === Reddit API ===
+        reddit_service = RedditService(
+            client_id=os.getenv("client_id"),
+            client_secret=os.getenv("client_secret"),
+            user_agent=os.getenv("user_agent"),
+            username=os.getenv("name"),
+            password=os.getenv("password")
+        )
+
         client.loop.create_task(time_check())
         client.run(TOKEN)
+    except RequestException as e:
+        print("Could not connect to praw service: {0}".format(e))
     except Exception as e:
         print("Something went wrong: {0}".format((e)))
     finally:
