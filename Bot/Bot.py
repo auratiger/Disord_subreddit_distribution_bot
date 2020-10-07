@@ -1,4 +1,6 @@
 import os
+from os import path
+
 import asyncio
 from datetime import datetime, timedelta
 import time
@@ -20,16 +22,33 @@ client = discord.Client()
 
 reddit_service = None
 
+
+def write_json(data, filename="data.json"):
+    with open(filename, "w") as write_file:
+        json.dump(data, write_file, indent=4)
+
+# check if data file exits
+if not os.path.exists("data.json"):
+    print("data.json file does not exits... Creating new data.json file.")
+    with open("data.json", "w") as write_file:
+        data_object = {
+            "limit": 10,
+            "reddit_scrape_running": True,
+            "last_saved": "",
+            "last_upvoted": "",
+            "last_scrape_timestamp": -1,
+            "channels": {}
+        }
+
+    write_json(data)
+
+
 # load data
 data = None
 with open("data.json") as data_file:
     data = json.load(data_file)
 
 # ==== util functions ====
-
-def write_json(data, filename="data.json"):
-    with open(filename, "w") as write_file:
-        json.dump(data, write_file, indent=4)
 
 async def delete_messages(channel):
     counter = 0
@@ -87,7 +106,8 @@ async def manage_saved_posts(limit: int):
         channel_id = data["channels"].get(key, None)
 
         if (channel_id == None):
-            guild = client.get_guild(data["guild_id"])
+            guild= int(os.getenv("GUILD_ID"))
+            # guild = client.get_guild(data["guild_id"])
             category_channel = discord.utils.get(guild.categories, name="Text Channels")
 
             channel = await category_channel.create_text_channel(key)
@@ -115,7 +135,8 @@ async def manage_upvoted_posts(limit: int):
     channel_id = data["channels"].get("upvotes", None)
 
     if (channel_id == None):
-        guild = client.get_guild(data["guild_id"])
+        guild = int(os.getenv("GUILD_ID"))
+        # guild = client.get_guild(data["guild_id"])
         category_channel = discord.utils.get(guild.categories, name="Text Channels")
 
         channel = await category_channel.create_text_channel("upvotes")
