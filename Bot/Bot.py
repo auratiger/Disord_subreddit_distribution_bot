@@ -106,8 +106,8 @@ async def manage_saved_posts(limit: int):
         channel_id = data["channels"].get(key, None)
 
         if (channel_id == None):
-            guild= int(os.getenv("GUILD_ID"))
-            # guild = client.get_guild(data["guild_id"])
+            guild_id = int(os.getenv("GUILD_ID"))
+            guild = client.get_guild(guild_id)
             category_channel = discord.utils.get(guild.categories, name="Text Channels")
 
             channel = await category_channel.create_text_channel(key)
